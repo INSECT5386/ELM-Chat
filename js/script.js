@@ -244,13 +244,4 @@ def greet(name):
 
   // 초기 실행
   init();
-// 서비스 워커 등록
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/service-worker.js')
-      .then((reg) => console.log('✅ Service Worker 등록 완료:', reg))
-      .catch((err) => console.error('❌ 등록 실패:', err));
-  });
-}
 
