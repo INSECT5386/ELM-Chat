@@ -1,5 +1,5 @@
 // 루트 또는 public/ 아래에 service-worker.js
-const CACHE_NAME = 'covec-cache-v2';
+const CACHE_NAME = 'covec-cache-v3';
 const urlsToCache = [
   '/',
   '/index.html',
