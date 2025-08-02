@@ -2,10 +2,10 @@
 const CACHE_NAME = 'covec-cache-v7';
 const urlsToCache = [
   '/',
-  '/index.html',
-  '/css/style.css',
-  '/js/script.js',
-  '/manifest.json',
+  '/CoVec-Web/index.html',
+  '/CoVec-Web/css/style.css',
+  '/CoVec-Web/js/script.js',
+  '/CoVec-Web/manifest.json',
   '/CoVec-Web/icon-192.png',
   '/CoVec-Web/icon-512.png',
   'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
