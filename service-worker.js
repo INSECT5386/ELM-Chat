@@ -6,8 +6,8 @@ const urlsToCache = [
   '/css/style.css',
   '/js/script.js',
   '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
+  '/CoVec-Web/icon-192.png',
+  '/CoVec-Web/icon-512.png',
   'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
   'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.8.0/build/highlight.min.js',
   'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.8.0/build/styles/atom-one-dark.min.css'
