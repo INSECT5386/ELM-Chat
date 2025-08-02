@@ -1,7 +1,7 @@
 {
   "name": "CoVec Chat",
   "short_name": "CoVec",
-  "start_url": "/",
+  "start_url": "/CoVec-Web/",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#1f1f1f",
