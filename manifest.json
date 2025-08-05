@@ -1,6 +1,6 @@
 {
-  "name": "CoVec Chat",
-  "short_name": "CoVec",
+  "name": "ELM-Chat",
+  "short_name": "ELM",
   "start_url": "/ELM-Chat/",
   "display": "standalone",
   "background_color": "#000000",
