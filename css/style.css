@@ -170,18 +170,17 @@ html, body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
-/* 코드블럭 둥글둥글하게, 부드러운 그림자 */
 pre {
-  background-color: #f7f3e9;
+  background-color: #fdf9f0; /* 완전 밝고 부드러운 크림색 */
   border-radius: 16px;
   padding: 20px 28px;
   overflow-x: auto;
   margin-top: 14px;
-  border: 1px solid #e0d8c3;
+  border: 1px solid #e5deca; /* 살짝 연한 베이지 라인 */
   font-family: 'JetBrains Mono', monospace;
   font-size: 15px;
-  color: #5e533e;
-  box-shadow: 0 4px 10px rgba(150, 130, 90, 0.1);
+  color: #5e533e; /* 따뜻한 갈색 계열 글자색 */
+  box-shadow: 0 3px 10px rgba(180, 160, 110, 0.1); /* 부드러운 그림자 */
   position: relative;
   user-select: text;
 }
@@ -346,3 +345,4 @@ pre:hover .copy-btn {
     left: 0;
   }
 }
+
