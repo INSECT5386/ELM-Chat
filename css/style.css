@@ -14,8 +14,8 @@ html, body {
   height: 100%;
   width: 100%;
   font-family: 'Nanum Gothic', 'Noto Sans KR', sans-serif;
-  background-color: #f0f1f5;  /* 아주 연하고 은은한 회색톤 */
-  color: #2c2f48;              /* 약간 짙은 네이비 블루 계열로 부드럽게 */
+  background-color: #faf7f0;  /* 크림 베이지톤 */
+  color: #4a4a4a;             /* 차분한 다크 그레이 */
   overflow: hidden;
   display: flex;
 }
@@ -23,18 +23,18 @@ html, body {
 #sidebar {
   width: var(--sidebar-width);
   height: 100vh;
-  background-color: #ffffff;  /* 밝은 흰색 유지하되 */
-  border-right: 1px solid #d1d5db; /* 연한 그레이톤 */
+  background-color: #fff8e7;  /* 아주 연한 크림색 */
+  border-right: 1px solid #e5e1d8; /* 베이지톤 경계 */
   padding: 24px 20px;
   box-sizing: border-box;
   overflow-y: auto;
   flex-shrink: 0;
   user-select: none;
-  box-shadow: 3px 0 15px rgba(0,0,0,0.05);
+  box-shadow: 3px 0 15px rgba(0,0,0,0.04);
 }
 
 #sidebar h2 {
-  color: #4f6ef7; /* 파랑이지만 살짝 톤 다운 */
+  color: #b28d5c;  /* 따뜻한 황토빛 */
   font-size: 24px;
   font-weight: 700;
   margin-bottom: 16px;
@@ -46,12 +46,12 @@ html, body {
 #room-list {
   flex: 1;
   overflow-y: auto;
-  background: #f9f9fb;  /* 거의 흰색에 가까운 연한 배경 */
+  background: #fefbf5;  /* 밝은 크림톤 */
   border-radius: 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid #e5e1d8;
   padding: 8px 0;
   scrollbar-width: thin;
-  scrollbar-color: #4f6ef7 transparent;
+  scrollbar-color: #b28d5c transparent;
   margin-bottom: 16px;
 }
 
@@ -62,7 +62,7 @@ html, body {
 #room-list li {
   padding: 12px 24px;
   cursor: pointer;
-  color: #7a7e8c; /* 중간 톤 그레이 */
+  color: #7e7a72; /* 부드러운 그레이 브라운 */
   transition: background-color 0.25s ease, color 0.25s ease, border-left-color 0.25s ease;
   border-left: 4px solid transparent;
   border-radius: 0 8px 8px 0;
@@ -70,26 +70,26 @@ html, body {
 }
 
 #room-list li:hover {
-  background-color: #e2e5fb;  /* 아주 연한 파란색 */
-  color: #374151;  /* 부드러운 다크 그레이 */
+  background-color: #fff7db;  /* 은은한 황토빛 배경 */
+  color: #5e4a22;  /* 톤 다운된 브라운 */
 }
 
 #room-list li.active {
-  background-color: #cdd4ff;  /* 연한 보라빛 느낌 */
-  color: #2c3a95;
-  border-left-color: #4f6ef7;
+  background-color: #f1e4b3;  /* 부드러운 머스터드 톤 */
+  color: #6f5823;
+  border-left-color: #b28d5c;
 }
 
 #new-room-btn {
-  background-color: #4f6ef7;
-  color: #ffffff;
+  background-color: #b28d5c;
+  color: #fff8e7;
   border: none;
   border-radius: 12px;
   font-weight: 700;
   font-size: 14px;
   padding: 10px 16px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(79, 110, 247, 0.4);
+  box-shadow: 0 4px 12px rgba(178, 141, 92, 0.4);
   user-select: none;
   transition: background-color 0.3s ease, transform 0.1s ease;
   width: 100%;
@@ -98,7 +98,7 @@ html, body {
 }
 
 #new-room-btn:hover {
-  background-color: #3a54c0;
+  background-color: #8e6f3f;
 }
 
 #new-room-btn:active {
@@ -110,7 +110,7 @@ html, body {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f7f8fc;  /* 살짝 그레이쉬한 화이트 */
+  background-color: #fffaf1;  /* 크림톤 배경 */
   overflow: hidden;
   position: relative;
 }
@@ -123,8 +123,8 @@ html, body {
   flex-direction: column;
   gap: 16px;
   scrollbar-width: thin;
-  scrollbar-color: #4f6ef7 transparent;
-  background-color: #f7f8fc;
+  scrollbar-color: #b28d5c transparent;
+  background-color: #fffaf1;
 }
 
 @keyframes fadeSlideUp {
@@ -146,7 +146,7 @@ html, body {
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   opacity: 0;
   animation: fadeSlideUp 0.4s forwards;
   position: relative;
@@ -155,100 +155,33 @@ html, body {
 }
 
 .message.user {
-  background: linear-gradient(135deg, #4f6ef7, #3a54c0);
-  color: #ffffff;
+  background: linear-gradient(135deg, #c9b380, #a68d3a);
+  color: #fff8e7;
   align-self: flex-end;
   border-bottom-right-radius: 8px;
-  box-shadow: 0 6px 20px rgba(79, 110, 247, 0.3);
+  box-shadow: 0 6px 20px rgba(166, 141, 58, 0.3);
 }
 
 .message.bot {
-  background-color: #e6e9f0;
-  color: #3b4252;
+  background-color: #fefaf3;
+  color: #6b6552;
   align-self: flex-start;
   border-bottom-left-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
-#input-area {
-  position: fixed;
-  bottom: 0;
-  left: var(--sidebar-width);
-  right: 0;
-  height: 60px;
-  background-color: #e1e4ec;
-  border-top: 1px solid #c7cad6;
-  box-shadow: 0 -1px 15px rgba(0, 0, 0, 0.04);
-  display: flex;
-  align-items: center;
-  padding: 0 24px;
-  z-index: 9999;
-}
-
-#input-text {
-  flex: 1;
-  font-size: 17px;
-  border: 1.8px solid #a0a5b6;
-  border-radius: 30px;
-  padding: 14px 24px;
-  resize: none;
-  min-height: 36px;
-  max-height: 100px;
-  font-family: 'Nanum Gothic', monospace;
-  background-color: #ffffff;
-  color: #2c3a51;
-  outline-offset: 4px;
-  box-shadow: inset 0 0 8px #b3bbff;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-#input-text:focus {
-  border-color: #4f6ef7;
-  box-shadow: 0 0 0 6px rgba(79, 110, 247, 0.3);
-}
-
-#send-btn {
-  background-color: #4f6ef7;
-  color: #ffffff;
-  border: none;
-  font-weight: 700;
-  padding: 0 30px;
-  margin-left: 18px;
-  border-radius: 34px;
-  cursor: pointer;
-  font-size: 17px;
-  box-shadow: 0 6px 18px rgba(79, 110, 247, 0.4);
-  user-select: none;
-  transition: background-color 0.3s ease, transform 0.12s ease;
-  height: 40px;
-  align-self: center;
-}
-
-#send-btn:hover:not(:disabled) {
-  background-color: #3a54c0;
-}
-
-#send-btn:active:not(:disabled) {
-  transform: translateY(2px);
-}
-
-#send-btn:disabled {
-  background-color: #b3bbff;
-  cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
-}
-
+/* 코드블럭 둥글둥글하게, 부드러운 그림자 */
 pre {
-  background-color: #f9fafc;
+  background-color: #f7f3e9;
   border-radius: 16px;
   padding: 20px 28px;
   overflow-x: auto;
   margin-top: 14px;
-  border: 1px solid #d1d5db;
+  border: 1px solid #e0d8c3;
   font-family: 'JetBrains Mono', monospace;
   font-size: 15px;
-  color: #4b5563;
+  color: #5e533e;
+  box-shadow: 0 4px 10px rgba(150, 130, 90, 0.1);
   position: relative;
   user-select: text;
 }
@@ -257,8 +190,8 @@ pre {
   position: absolute;
   top: 12px;
   right: 14px;
-  background-color: #a0a5b6;
-  color: #ffffff;
+  background-color: #a68d3a;
+  color: #fff8e7;
   border: none;
   border-radius: 8px;
   padding: 6px 14px;
@@ -273,6 +206,75 @@ pre:hover .copy-btn {
   opacity: 1;
 }
 
+#input-area {
+  position: fixed;
+  bottom: 0;
+  left: var(--sidebar-width);
+  right: 0;
+  height: 60px;
+  background-color: #f5f1e7;
+  border-top: 1px solid #e5decf;
+  box-shadow: 0 -1px 15px rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  z-index: 9999;
+}
+
+#input-text {
+  flex: 1;
+  font-size: 17px;
+  border: 1.8px solid #d6cfa8;
+  border-radius: 30px;
+  padding: 14px 24px;
+  resize: none;
+  min-height: 36px;
+  max-height: 100px;
+  font-family: 'Nanum Gothic', monospace;
+  background-color: #fff8e7;
+  color: #4a4a4a;
+  outline-offset: 4px;
+  box-shadow: inset 0 0 8px #d2c589;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#input-text:focus {
+  border-color: #b28d5c;
+  box-shadow: 0 0 0 6px rgba(178, 141, 92, 0.3);
+}
+
+#send-btn {
+  background-color: #b28d5c;
+  color: #fff8e7;
+  border: none;
+  font-weight: 700;
+  padding: 0 30px;
+  margin-left: 18px;
+  border-radius: 34px;
+  cursor: pointer;
+  font-size: 17px;
+  box-shadow: 0 6px 18px rgba(178, 141, 92, 0.4);
+  user-select: none;
+  transition: background-color 0.3s ease, transform 0.12s ease;
+  height: 40px;
+  align-self: center;
+}
+
+#send-btn:hover {
+  background-color: #8e6f3f;
+}
+
+#send-btn:active {
+  transform: translateY(2px);
+}
+
+#send-btn:disabled {
+  background-color: #d6cfa8;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
 #room-list::-webkit-scrollbar,
 #chat-container::-webkit-scrollbar {
   width: 8px;
@@ -285,7 +287,7 @@ pre:hover .copy-btn {
 
 #room-list::-webkit-scrollbar-thumb,
 #chat-container::-webkit-scrollbar-thumb {
-  background-color: #4f6ef7;
+  background-color: #b28d5c;
   border-radius: 6px;
   border: 2px solid transparent;
   background-clip: content-box;
