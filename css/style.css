@@ -14,8 +14,8 @@ html, body {
   height: 100%;
   width: 100%;
   font-family: 'Nanum Gothic', 'Noto Sans KR', sans-serif;
-  background-color: #0f1117;
-  color: #e6e8eb;
+  background-color: #f9fafb;  /* 아주 밝은 회색 느낌 */
+  color: #1f2937;              /* 짙은 회색 (블랙 대신 눈 편하게) */
   overflow: hidden;
   display: flex;
 }
@@ -23,18 +23,18 @@ html, body {
 #sidebar {
   width: var(--sidebar-width);
   height: 100vh;
-  background-color: #20232a;
-  border-right: 1px solid #2c2f3a;
+  background-color: #ffffff;   /* 완전 하얀 배경 */
+  border-right: 1px solid #e5e7eb; /* 연한 회색 경계 */
   padding: 24px 20px;
   box-sizing: border-box;
   overflow-y: auto;
   flex-shrink: 0;
   user-select: none;
-  box-shadow: 3px 0 15px rgba(0,0,0,0.5);
+  box-shadow: 3px 0 15px rgba(0,0,0,0.05);  /* 은은한 그림자 */
 }
 
 #sidebar h2 {
-  color: #61dafb;
+  color: #3b82f6;  /* 선명한 파란색 */
   font-size: 24px;
   font-weight: 700;
   margin-bottom: 16px;
@@ -46,12 +46,12 @@ html, body {
 #room-list {
   flex: 1;
   overflow-y: auto;
-  background: #12171f;
+  background: #f3f4f6;  /* 아주 연한 회색 */
   border-radius: 12px;
-  border: 1px solid #2c2f3a;
+  border: 1px solid #e5e7eb;
   padding: 8px 0;
   scrollbar-width: thin;
-  scrollbar-color: #61dafb transparent;
+  scrollbar-color: #3b82f6 transparent;
   margin-bottom: 16px;
 }
 
@@ -62,7 +62,7 @@ html, body {
 #room-list li {
   padding: 12px 24px;
   cursor: pointer;
-  color: #9ca3b0;
+  color: #6b7280; /* 중간 밝기 회색 */
   transition: background-color 0.25s ease, color 0.25s ease, border-left-color 0.25s ease;
   border-left: 4px solid transparent;
   border-radius: 0 8px 8px 0;
@@ -70,35 +70,35 @@ html, body {
 }
 
 #room-list li:hover {
-  background-color: #2f3653;
-  color: #e6e8eb;
+  background-color: #e0e7ff;  /* 연한 파란색 배경 */
+  color: #1e3a8a;  /* 진한 파란색 텍스트 */
 }
 
 #room-list li.active {
-  background-color: #2e3a72;
-  color: #fff;
-  border-left-color: #61dafb;
+  background-color: #bfdbfe;  /* 좀 더 진한 파란색 */
+  color: #1e40af;  /* 짙은 파란색 */
+  border-left-color: #3b82f6;
 }
 
 #new-room-btn {
-  background-color: #61dafb;
-  color: #0a0e14;
+  background-color: #3b82f6;
+  color: #ffffff;
   border: none;
   border-radius: 12px;
   font-weight: 700;
   font-size: 14px;
   padding: 10px 16px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(97, 218, 251, 0.4);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
   user-select: none;
   transition: background-color 0.3s ease, transform 0.1s ease;
-  width: 100%;          /* 가로 폭 꽉 채우기 */
+  width: 100%;
   box-sizing: border-box;
-  margin-top: auto;     /* 리스트 밑에 딱 붙도록 */
+  margin-top: auto;
 }
 
 #new-room-btn:hover {
-  background-color: #4bb8f5;
+  background-color: #2563eb;
 }
 
 #new-room-btn:active {
@@ -111,7 +111,7 @@ html, body {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #12171f;
+  background-color: #ffffff;
   overflow: hidden;
   position: relative;
 }
@@ -124,8 +124,8 @@ html, body {
   flex-direction: column;
   gap: 16px;
   scrollbar-width: thin;
-  scrollbar-color: #61dafb transparent;
-  background-color: #12171f;
+  scrollbar-color: #3b82f6 transparent;
+  background-color: #ffffff;
 }
 
 @keyframes fadeSlideUp {
@@ -147,7 +147,7 @@ html, body {
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   opacity: 0;
   animation: fadeSlideUp 0.4s forwards;
   position: relative;
@@ -156,19 +156,19 @@ html, body {
 }
 
 .message.user {
-  background: linear-gradient(135deg, #61dafb, #4aa0d7);
-  color: #0a0e14;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #ffffff;
   align-self: flex-end;
   border-bottom-right-radius: 8px;
-  box-shadow: 0 8px 25px rgba(97, 218, 251, 0.6);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
 }
 
 .message.bot {
-  background-color: #1f273b;
-  color: #d6d8e0;
+  background-color: #f3f4f6;
+  color: #374151;
   align-self: flex-start;
   border-bottom-left-radius: 8px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 #input-area {
@@ -177,9 +177,9 @@ html, body {
   left: var(--sidebar-width);
   right: 0;
   height: 60px;
-  background-color: #1e2640;
-  border-top: 1px solid #2c3246;
-  box-shadow: 0 -1px 15px rgba(0, 0, 0, 0.6);
+  background-color: #e5e7eb;
+  border-top: 1px solid #d1d5db;
+  box-shadow: 0 -1px 15px rgba(0, 0, 0, 0.05);
   display: flex;
   align-items: center;
   padding: 0 24px;
@@ -189,28 +189,28 @@ html, body {
 #input-text {
   flex: 1;
   font-size: 17px;
-  border: 1.8px solid #3a4a7a;
+  border: 1.8px solid #9ca3af;
   border-radius: 30px;
   padding: 14px 24px;
   resize: none;
   min-height: 36px;
   max-height: 100px;
   font-family: 'Nanum Gothic', monospace;
-  background-color: #1c2440;
-  color: #e6e8eb;
+  background-color: #ffffff;
+  color: #1f2937;
   outline-offset: 4px;
-  box-shadow: inset 0 0 8px #375a9a;
+  box-shadow: inset 0 0 8px #a5b4fc;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 #input-text:focus {
-  border-color: #61dafb;
-  box-shadow: 0 0 0 6px rgba(97, 218, 251, 0.4);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.4);
 }
 
 #send-btn {
-  background-color: #61dafb;
-  color: #0a0e14;
+  background-color: #3b82f6;
+  color: #ffffff;
   border: none;
   font-weight: 700;
   padding: 0 30px;
@@ -218,7 +218,7 @@ html, body {
   border-radius: 34px;
   cursor: pointer;
   font-size: 17px;
-  box-shadow: 0 6px 18px rgba(97, 218, 251, 0.6);
+  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.6);
   user-select: none;
   transition: background-color 0.3s ease, transform 0.12s ease;
   height: 40px;
@@ -226,7 +226,7 @@ html, body {
 }
 
 #send-btn:hover:not(:disabled) {
-  background-color: #4bb8f5;
+  background-color: #2563eb;
 }
 
 #send-btn:active:not(:disabled) {
@@ -234,22 +234,22 @@ html, body {
 }
 
 #send-btn:disabled {
-  background-color: #4c5060;
+  background-color: #a5b4fc;
   cursor: not-allowed;
   box-shadow: none;
   transform: none;
 }
 
 pre {
-  background-color: #202b44;
+  background-color: #f9fafb;
   border-radius: 16px;
   padding: 20px 28px;
   overflow-x: auto;
   margin-top: 14px;
-  border: 1px solid #2c3551;
+  border: 1px solid #e5e7eb;
   font-family: 'JetBrains Mono', monospace;
   font-size: 15px;
-  color: #a0aec0;
+  color: #374151;
   position: relative;
   user-select: text;
 }
@@ -258,8 +258,8 @@ pre {
   position: absolute;
   top: 12px;
   right: 14px;
-  background-color: #40567a;
-  color: #e6e8eb;
+  background-color: #9ca3af;
+  color: #ffffff;
   border: none;
   border-radius: 8px;
   padding: 6px 14px;
@@ -286,7 +286,7 @@ pre:hover .copy-btn {
 
 #room-list::-webkit-scrollbar-thumb,
 #chat-container::-webkit-scrollbar-thumb {
-  background-color: #61dafb;
+  background-color: #3b82f6;
   border-radius: 6px;
   border: 2px solid transparent;
   background-clip: content-box;
