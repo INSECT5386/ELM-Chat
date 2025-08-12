@@ -111,7 +111,7 @@ class LearnableWeightedPooling(layers.Layer):
         return weighted_sum
 
 def transformer_encoder_block(x, num_heads=NUM_HEADS, ff_dim=EMBED_DIM*4):
-    attn_output = layers.MultiHeadAttention(num_heads, EMBED_DIM//num_heads)(x)
+    attn_output = layers.MultiHeadAttention(num_heads, EMBED_DIM//num_heads)(x, x)
     attn_output = layers.Dropout(0.1)(attn_output)
     out1 = layers.LayerNormalization(epsilon=1e-6)(x + attn_output)
 
@@ -253,3 +253,4 @@ if __name__ == "__main__":
     from sklearn.metrics.pairwise import cosine_similarity
     sim = cosine_similarity([test_embeddings[0]], [test_embeddings[1]])
     print(f"임베딩[0] vs [1] 유사도: {sim[0][0]:.4f}") 
+
