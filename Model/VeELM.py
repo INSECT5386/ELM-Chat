@@ -33,7 +33,7 @@ download_file(
     JSONL_PATH
 )
 download_file(
-    'https://huggingface.co/datasets/Yuchan5386/Kode/resolve/main/ko_bpe.json?download=true',  # json 파일 링크로 바꿔야 함
+    'https://huggingface.co/datasets/Yuchan5386/Kode/resolve/main/ko_bpe.json?download=true',
     TK_MODEL_PATH
 )
 
@@ -42,14 +42,13 @@ tokenizer = Tokenizer.from_file(TK_MODEL_PATH)
 vocab_size = tokenizer.get_vocab_size()
 
 # 하이퍼파라미터
-EMBED_DIM = 128
-NUM_HEADS = 4
-MAX_SEQ_LEN = 128
-OUTPUT_DIM = 128
+EMBED_DIM = 192
+NUM_HEADS = 6
+MAX_SEQ_LEN = 192
+OUTPUT_DIM = 192
 EPOCHS = 1
-BATCH_SIZE = 64
-MARGIN = 0.3
-TOTAL_QA_COUNT = 2892368
+BATCH_SIZE = 128
+TOTAL_QA_COUNT = 2682172
 
 def tk_tokenize(texts, max_len=MAX_SEQ_LEN):
     encoded = [tokenizer.encode(text).ids for text in texts]
@@ -88,24 +87,92 @@ class L2NormLayer(layers.Layer):
     def get_config(self):
         return {"axis": self.axis, "epsilon": self.epsilon, **super().get_config()}
 
-class MaskedGlobalAveragePooling1D(layers.Layer):
-    def __init__(self, **kwargs):
+# MultiHeadWeightedPooling 레이어 (learnable head weighting 포함)
+class MultiHeadWeightedPooling(layers.Layer):
+    def __init__(self, num_heads=4, **kwargs):
         super().__init__(**kwargs)
+        self.num_heads = num_heads
+
+    def build(self, input_shape):
+        self.token_score_dense = layers.Dense(
+            self.num_heads, use_bias=False,
+            kernel_initializer='glorot_uniform'
+        )
+        self.head_weights = self.add_weight(
+            name="head_weights",
+            shape=(self.num_heads,),
+            initializer=tf.keras.initializers.Ones(),
+            trainable=True
+        )
+        super().build(input_shape)
 
     def call(self, inputs, mask=None):
-        if mask is None:
-            return tf.reduce_mean(inputs, axis=1)
-        mask = tf.cast(mask, inputs.dtype)
-        mask = tf.expand_dims(mask, axis=-1)
-        summed = tf.reduce_sum(inputs * mask, axis=1)
-        counts = tf.reduce_sum(mask, axis=1)
-        return summed / (counts + 1e-9)
+        scores = self.token_score_dense(inputs)
+        scores = scores - tf.reduce_max(scores, axis=1, keepdims=True)
+
+        if mask is not None:
+            mask = tf.cast(mask, scores.dtype)
+            scores += (1 - mask[..., tf.newaxis]) * -1e9
+
+        weights = tf.nn.softmax(scores, axis=1)
+        head_outputs = tf.einsum("bse,bsn->bne", inputs, weights)
+        head_weighted = head_outputs * tf.reshape(self.head_weights, (1, self.num_heads, 1))
+        pooled = tf.reduce_sum(head_weighted, axis=1)
+        return pooled
 
     def compute_mask(self, inputs, mask=None):
-        return None
+        return None  # Masking 끝
 
-def transformer_encoder_block(x, num_heads=NUM_HEADS, ff_dim=EMBED_DIM*4):
-    attn_output = layers.MultiHeadAttention(num_heads=num_heads, key_dim=EMBED_DIM)(x, x)
+class GLALayer(layers.Layer):
+    def __init__(self, dim, num_heads, **kwargs):
+        super().__init__(**kwargs)
+        self.dim = dim
+        self.num_heads = num_heads
+        assert dim % num_heads == 0
+        self.head_dim = dim // num_heads
+        
+        # 초기화 시점엔 None으로 둠
+        self.qkv = None
+        self.out_proj = None
+
+    def build(self, input_shape):
+        # input_shape: (batch, seq_len, embed_dim)
+        self.qkv = layers.Dense(self.dim * 3)
+        self.out_proj = layers.Dense(self.dim)
+        super().build(input_shape)
+
+    def call(self, inputs, mask=None):
+        B, T = tf.shape(inputs)[0], tf.shape(inputs)[1]
+        qkv = self.qkv(inputs)
+        q, k, v = tf.split(qkv, 3, axis=-1)
+
+        def split_heads(x):
+            x = tf.reshape(x, (B, T, self.num_heads, self.head_dim))
+            return tf.transpose(x, [0, 2, 1, 3])  # [B, H, T, hd]
+
+        q = split_heads(q)
+        k = split_heads(k)
+        v = split_heads(v)
+
+        k = tf.nn.softmax(k, axis=-1)
+
+        if mask is not None:
+            mask = tf.cast(mask, tf.float32)  # [B, T]
+            mask = tf.reshape(mask, (B, 1, T, 1))  # [B,1,T,1]
+            k *= mask
+            v *= mask
+
+        context = tf.matmul(k, v, transpose_a=True)  # [B,H,hd,hd]
+        out = tf.matmul(q, context)  # [B,H,T,hd]
+        out = tf.transpose(out, [0, 2, 1, 3])  # [B,T,H,hd]
+        out = tf.reshape(out, (B, T, self.dim))  # [B,T,D]
+        return self.out_proj(out)
+
+    def compute_mask(self, inputs, mask=None):
+        return mask
+
+def transformer_encoder_block(x, mask=None, num_heads=NUM_HEADS, ff_dim=EMBED_DIM*4):
+    attn_output = GLALayer(dim=EMBED_DIM, num_heads=num_heads)(x, mask=mask)
     attn_output = layers.Dropout(0.1)(attn_output)
     out1 = layers.LayerNormalization(epsilon=1e-6)(x + attn_output)
 
@@ -114,21 +181,25 @@ def transformer_encoder_block(x, num_heads=NUM_HEADS, ff_dim=EMBED_DIM*4):
     ffn_output = layers.Dropout(0.1)(ffn_output)
     return layers.LayerNormalization(epsilon=1e-6)(out1 + ffn_output)
 
+
 def build_simple_encoder():
     inputs = layers.Input(shape=(MAX_SEQ_LEN,), dtype=tf.int32)
-    embedding = layers.Embedding(vocab_size, EMBED_DIM, mask_zero=True)(inputs)
+    embedding_layer = layers.Embedding(vocab_size, EMBED_DIM, mask_zero=True)
+    embedding = embedding_layer(inputs)
 
     x = layers.LayerNormalization()(embedding)
 
-    x = transformer_encoder_block(x)
-    x = transformer_encoder_block(x)
+    mask = embedding_layer.compute_mask(inputs)
 
-    mask = embedding._keras_mask
-    x = MaskedGlobalAveragePooling1D()(x, mask=mask)
+    x = transformer_encoder_block(x, mask=mask)
+    x = transformer_encoder_block(x, mask=mask)
+
+    x = MultiHeadWeightedPooling()(x, mask=mask)
 
     x = layers.Dense(OUTPUT_DIM)(x)
     outputs = L2NormLayer()(x)
     return Model(inputs, outputs)
+
 
 def build_simple_siamese_model():
     encoder = build_simple_encoder()
@@ -203,7 +274,6 @@ def train_step(model, optimizer, batch_data):
     grads = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
     return loss
-
 
 if __name__ == "__main__":
     siamese_model, encoder = build_simple_siamese_model()
