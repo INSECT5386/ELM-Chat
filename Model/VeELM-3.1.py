@@ -157,10 +157,11 @@ class GLALayer(layers.Layer):
         k = tf.nn.softmax(k, axis=-1)
 
         if mask is not None:
-            mask = tf.cast(mask, tf.float32)  # [B, T]
-            mask = tf.reshape(mask, (B, 1, T, 1))  # [B,1,T,1]
-            k *= mask
-            v *= mask
+            mask = tf.cast(mask, tf.float32)
+            mask = tf.reshape(mask, (B, 1, T, 1))
+            k += (1 - mask) * -1e9
+        k = tf.nn.softmax(k, axis=-1)
+
 
         context = tf.matmul(k, v, transpose_a=True)  # [B,H,hd,hd]
         out = tf.matmul(q, context)  # [B,H,T,hd]
@@ -277,7 +278,7 @@ def train_step(model, optimizer, batch_data):
 
 if __name__ == "__main__":
     siamese_model, encoder = build_simple_siamese_model()
-    optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=1e-5, clipnorm=1.0)
     train_dataset = create_tf_dataset_from_jsonl(JSONL_PATH, BATCH_SIZE).repeat()
 
     steps_per_epoch = TOTAL_QA_COUNT // BATCH_SIZE
