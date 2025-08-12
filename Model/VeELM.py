@@ -42,10 +42,10 @@ tokenizer = Tokenizer.from_file(TK_MODEL_PATH)
 vocab_size = tokenizer.get_vocab_size()
 
 # 하이퍼파라미터
-EMBED_DIM = 192
-NUM_HEADS = 6
+EMBED_DIM = 160
+NUM_HEADS = 4
 MAX_SEQ_LEN = 192
-OUTPUT_DIM = 192
+OUTPUT_DIM = 160
 EPOCHS = 1
 BATCH_SIZE = 128
 TOTAL_QA_COUNT = 2682172
