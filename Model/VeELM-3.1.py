@@ -33,7 +33,7 @@ download_file(
     JSONL_PATH
 )
 download_file(
-    'https://huggingface.co/datasets/Yuchan5386/Kode/resolve/main/ko_bpe.json?download=true',
+    'https://huggingface.co/datasets/Yuchan5386/Kode/resolve/main/ko_bpe.json?download=true',  # json 파일 링크로 바꿔야 함
     TK_MODEL_PATH
 )
 
@@ -44,7 +44,7 @@ vocab_size = tokenizer.get_vocab_size()
 # 하이퍼파라미터
 EMBED_DIM = 160
 NUM_HEADS = 4
-MAX_SEQ_LEN = 192
+MAX_SEQ_LEN = 128
 OUTPUT_DIM = 160
 EPOCHS = 1
 BATCH_SIZE = 128
@@ -87,93 +87,31 @@ class L2NormLayer(layers.Layer):
     def get_config(self):
         return {"axis": self.axis, "epsilon": self.epsilon, **super().get_config()}
 
-# MultiHeadWeightedPooling 레이어 (learnable head weighting 포함)
-class MultiHeadWeightedPooling(layers.Layer):
-    def __init__(self, num_heads=4, **kwargs):
+class LearnableWeightedPooling(layers.Layer):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.num_heads = num_heads
+        self.dense = None  # 초기엔 None으로 선언해둠
 
     def build(self, input_shape):
-        self.token_score_dense = layers.Dense(
-            self.num_heads, use_bias=False,
-            kernel_initializer='glorot_uniform'
-        )
-        self.head_weights = self.add_weight(
-            name="head_weights",
-            shape=(self.num_heads,),
-            initializer=tf.keras.initializers.Ones(),
-            trainable=True
-        )
-        super().build(input_shape)
+        # input_shape: (batch_size, seq_len, embed_dim)
+        self.dense = layers.Dense(1, use_bias=False)
+        self.dense.build(input_shape)  # Dense 레이어 build 호출해서 가중치 생성
+        self.built = True  # build 완료 플래그 설정
 
     def call(self, inputs, mask=None):
-        scores = self.token_score_dense(inputs)
-        scores = scores - tf.reduce_max(scores, axis=1, keepdims=True)
+        scores = self.dense(inputs)  # (batch, seq_len, 1)
 
         if mask is not None:
             mask = tf.cast(mask, scores.dtype)
-            scores += (1 - mask[..., tf.newaxis]) * -1e9
+            minus_inf = -1e9
+            scores = scores + (1 - mask[..., tf.newaxis]) * minus_inf
 
-        weights = tf.nn.softmax(scores, axis=1)
-        head_outputs = tf.einsum("bse,bsn->bne", inputs, weights)
-        head_weighted = head_outputs * tf.reshape(self.head_weights, (1, self.num_heads, 1))
-        pooled = tf.reduce_sum(head_weighted, axis=1)
-        return pooled
+        weights = tf.nn.softmax(scores, axis=1)  # (batch, seq_len, 1)
+        weighted_sum = tf.reduce_sum(inputs * weights, axis=1)  # (batch, embed_dim)
+        return weighted_sum
 
-    def compute_mask(self, inputs, mask=None):
-        return None  # Masking 끝
-
-class GLALayer(layers.Layer):
-    def __init__(self, dim, num_heads, **kwargs):
-        super().__init__(**kwargs)
-        self.dim = dim
-        self.num_heads = num_heads
-        assert dim % num_heads == 0
-        self.head_dim = dim // num_heads
-        
-        # 초기화 시점엔 None으로 둠
-        self.qkv = None
-        self.out_proj = None
-
-    def build(self, input_shape):
-        # input_shape: (batch, seq_len, embed_dim)
-        self.qkv = layers.Dense(self.dim * 3)
-        self.out_proj = layers.Dense(self.dim)
-        super().build(input_shape)
-
-    def call(self, inputs, mask=None):
-        B, T = tf.shape(inputs)[0], tf.shape(inputs)[1]
-        qkv = self.qkv(inputs)
-        q, k, v = tf.split(qkv, 3, axis=-1)
-
-        def split_heads(x):
-            x = tf.reshape(x, (B, T, self.num_heads, self.head_dim))
-            return tf.transpose(x, [0, 2, 1, 3])  # [B, H, T, hd]
-
-        q = split_heads(q)
-        k = split_heads(k)
-        v = split_heads(v)
-
-        k = tf.nn.softmax(k, axis=-1)
-
-        if mask is not None:
-            mask = tf.cast(mask, tf.float32)
-            mask = tf.reshape(mask, (B, 1, T, 1))
-            k += (1 - mask) * -1e9
-        k = tf.nn.softmax(k, axis=-1)
-
-
-        context = tf.matmul(k, v, transpose_a=True)  # [B,H,hd,hd]
-        out = tf.matmul(q, context)  # [B,H,T,hd]
-        out = tf.transpose(out, [0, 2, 1, 3])  # [B,T,H,hd]
-        out = tf.reshape(out, (B, T, self.dim))  # [B,T,D]
-        return self.out_proj(out)
-
-    def compute_mask(self, inputs, mask=None):
-        return mask
-
-def transformer_encoder_block(x, mask=None, num_heads=NUM_HEADS, ff_dim=EMBED_DIM*4):
-    attn_output = GLALayer(dim=EMBED_DIM, num_heads=num_heads)(x, mask=mask)
+def transformer_encoder_block(x, num_heads=NUM_HEADS, ff_dim=EMBED_DIM*4):
+    attn_output = layers.MultiHeadAttention(num_heads, EMBED_DIM//num_heads)(x)
     attn_output = layers.Dropout(0.1)(attn_output)
     out1 = layers.LayerNormalization(epsilon=1e-6)(x + attn_output)
 
@@ -185,17 +123,17 @@ def transformer_encoder_block(x, mask=None, num_heads=NUM_HEADS, ff_dim=EMBED_DI
 
 def build_simple_encoder():
     inputs = layers.Input(shape=(MAX_SEQ_LEN,), dtype=tf.int32)
-    embedding_layer = layers.Embedding(vocab_size, EMBED_DIM, mask_zero=True)
-    embedding = embedding_layer(inputs)
+    embedding = layers.Embedding(vocab_size, EMBED_DIM, mask_zero=True)(inputs)
 
     x = layers.LayerNormalization()(embedding)
 
-    mask = embedding_layer.compute_mask(inputs)
+    x = transformer_encoder_block(x)
+    x = transformer_encoder_block(x)
 
-    x = transformer_encoder_block(x, mask=mask)
-    x = transformer_encoder_block(x, mask=mask)
+    mask = embedding._keras_mask
 
-    x = MultiHeadWeightedPooling()(x, mask=mask)
+    # 여기서 MaskedGlobalAveragePooling1D 대신 LearnableWeightedPooling 사용
+    x = LearnableWeightedPooling()(x, mask=mask)
 
     x = layers.Dense(OUTPUT_DIM)(x)
     outputs = L2NormLayer()(x)
@@ -276,9 +214,10 @@ def train_step(model, optimizer, batch_data):
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
     return loss
 
+
 if __name__ == "__main__":
     siamese_model, encoder = build_simple_siamese_model()
-    optimizer = tf.keras.optimizers.Adam(learning_rate=1e-5, clipnorm=1.0)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
     train_dataset = create_tf_dataset_from_jsonl(JSONL_PATH, BATCH_SIZE).repeat()
 
     steps_per_epoch = TOTAL_QA_COUNT // BATCH_SIZE
@@ -313,4 +252,4 @@ if __name__ == "__main__":
 
     from sklearn.metrics.pairwise import cosine_similarity
     sim = cosine_similarity([test_embeddings[0]], [test_embeddings[1]])
-    print(f"임베딩[0] vs [1] 유사도: {sim[0][0]:.4f}")
+    print(f"임베딩[0] vs [1] 유사도: {sim[0][0]:.4f}") 
