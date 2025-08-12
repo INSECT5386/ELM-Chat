@@ -20,11 +20,11 @@ else:
 
 # 경로 설정
 TK_MODEL_PATH = hf_hub_download(repo_id="Yuchan5386/Kode", filename="ko_bpe.json", repo_type="dataset")
-MODEL_PATH = hf_hub_download(repo_id="Yuchan5386/VeELM", filename="sentence_encoder_model.keras", repo_type="model")
+MODEL_PATH = hf_hub_download(repo_id="Yuchan5386/VeELM-2", filename="sentence_encoder_model.keras", repo_type="model")
 JSONL_PATH = hf_hub_download(repo_id="Yuchan5386/Kode", filename="data.jsonl", repo_type="dataset")
 
 MAX_SEQ_LEN = 128
-BATCH_SIZE = 32
+BATCH_SIZE = 128
 
 # tokenizers 라이브러리 토크나이저 로드
 tokenizer = Tokenizer.from_file(TK_MODEL_PATH)
@@ -43,26 +43,31 @@ class L2NormLayer(layers.Layer):
     def get_config(self):
         return {"axis": self.axis, "epsilon": self.epsilon, **super().get_config()}
 
-class MaskedGlobalAveragePooling1D(layers.Layer):
+class LearnableWeightedPooling(layers.Layer):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.dense = None  # 초기엔 None으로 선언해둠
+
+    def build(self, input_shape):
+        # input_shape: (batch_size, seq_len, embed_dim)
+        self.dense = layers.Dense(1, use_bias=False)
+        self.dense.build(input_shape)  # Dense 레이어 build 호출해서 가중치 생성
+        self.built = True  # build 완료 플래그 설정
 
     def call(self, inputs, mask=None):
-        # inputs: (batch, seq_len, dim)
-        # mask:   (batch, seq_len)  — True for real tokens, False for PAD
-        if mask is None:
-            return tf.reduce_mean(inputs, axis=1)
-        mask = tf.cast(mask, inputs.dtype)               # (batch, seq_len)
-        mask = tf.expand_dims(mask, axis=-1)             # (batch, seq_len, 1)
-        summed = tf.reduce_sum(inputs * mask, axis=1)    # (batch, dim)
-        counts = tf.reduce_sum(mask, axis=1)             # (batch, 1)
-        return summed / (counts + 1e-9)                  # 0 나누기 방지
+        scores = self.dense(inputs)  # (batch, seq_len, 1)
 
-    def compute_mask(self, inputs, mask=None):
-        # 이 레이어 뒤에는 더 이상 mask가 필요 없으니 None 반환
-        return None
+        if mask is not None:
+            mask = tf.cast(mask, scores.dtype)
+            minus_inf = -1e9
+            scores = scores + (1 - mask[..., tf.newaxis]) * minus_inf
 
-encoder = load_model(MODEL_PATH, custom_objects={"L2NormLayer": L2NormLayer, "MaskedGlobalAveragePooling1D": MaskedGlobalAveragePooling1D})
+        weights = tf.nn.softmax(scores, axis=1)  # (batch, seq_len, 1)
+        weighted_sum = tf.reduce_sum(inputs * weights, axis=1)  # (batch, embed_dim)
+        return weighted_sum
+    
+
+encoder = load_model(MODEL_PATH, custom_objects={"L2NormLayer": L2NormLayer, "LearnableWeightedPooling": LearnableWeightedPooling})
 
 print("✅ 인코더 모델 로드 완료")
 

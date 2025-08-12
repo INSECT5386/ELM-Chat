@@ -26,19 +26,29 @@ class L2NormLayer(layers.Layer):
     def get_config(self):
         return {"axis": self.axis, "epsilon": self.epsilon, **super().get_config()}
 
-class MaskedGlobalAveragePooling1D(layers.Layer):
+class LearnableWeightedPooling(layers.Layer):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.dense = None  # 초기엔 None으로 선언해둠
+
+    def build(self, input_shape):
+        # input_shape: (batch_size, seq_len, embed_dim)
+        self.dense = layers.Dense(1, use_bias=False)
+        self.dense.build(input_shape)  # Dense 레이어 build 호출해서 가중치 생성
+        self.built = True  # build 완료 플래그 설정
+
     def call(self, inputs, mask=None):
-        if mask is None:
-            return tf.reduce_mean(inputs, axis=1)
-        mask = tf.cast(mask, inputs.dtype)
-        mask = tf.expand_dims(mask, axis=-1)
-        summed = tf.reduce_sum(inputs * mask, axis=1)
-        counts = tf.reduce_sum(mask, axis=1)
-        return summed / (counts + 1e-9)
-    def compute_mask(self, inputs, mask=None):
-        return None
+        scores = self.dense(inputs)  # (batch, seq_len, 1)
+
+        if mask is not None:
+            mask = tf.cast(mask, scores.dtype)
+            minus_inf = -1e9
+            scores = scores + (1 - mask[..., tf.newaxis]) * minus_inf
+
+        weights = tf.nn.softmax(scores, axis=1)  # (batch, seq_len, 1)
+        weighted_sum = tf.reduce_sum(inputs * weights, axis=1)  # (batch, embed_dim)
+        return weighted_sum
+    
 
 # === 환경 변수 및 토큰 ===
 os.environ["HF_HOME"] = "/tmp/hf_cache"
@@ -59,7 +69,7 @@ INDEX_PATH = hf_hub_download(repo_id="Yuchan5386/VeELM", filename="answer_faiss_
 # tokenizers 라이브러리 토크나이저 로드
 tokenizer = Tokenizer.from_file(TK_MODEL_PATH)
 # === 인코더 로드 ===
-encoder = load_model(MODEL_PATH, custom_objects={"L2NormLayer": L2NormLayer, "MaskedGlobalAveragePooling1D": MaskedGlobalAveragePooling1D})
+encoder = load_model(MODEL_PATH, custom_objects={"L2NormLayer": L2NormLayer, "LearnableWeightedPooling": LearnableWeightedPooling})
 
 # === 답변 텍스트 로드 ===
 def load_answers_from_jsonl(jsonl_path):
@@ -187,11 +197,14 @@ def add_emoji_or_slang(text):
     ]
     return text + random.choice(suffixes)
 
-def mix_with_similar_response(query_emb, base_response, top_k=3):
-    D, I = faiss_index.search(query_emb, top_k)
-    if len(I[0]) < 2:
+
+def mix_with_similar_response(query_emb, base_response_idx, base_response, top_k=3):
+    D, I = faiss_index.search(query_emb, top_k + 1)  # 자기 자신 포함해서 더 검색
+    # 자기 자신 인덱스 제외
+    similar_indices = [idx for idx in I[0] if idx != base_response_idx]
+    if not similar_indices:
         return base_response
-    z_idx = I[0][1]
+    z_idx = similar_indices[0]
     z_text = answer_texts[z_idx]
     x_sentences = re.split(r'(?<=[.!?]) +', base_response)
     z_sentences = re.split(r'(?<=[.!?]) +', z_text)
@@ -202,6 +215,7 @@ def mix_with_similar_response(query_emb, base_response, top_k=3):
     insert_point = random.randint(0, len(x_sentences))
     new_sentences = x_sentences[:insert_point] + selected + x_sentences[insert_point:]
     return ' '.join(new_sentences)
+
 
 MATH_PATTERNS = [
     r'\d+[\+\-\*\/]\d+',
@@ -258,7 +272,6 @@ def solve_math_expression(expr: str) -> str:
 
 FILTERED_SENTENCES = [
     "sklearn.preprocessing에서 StandardScaler를 가져옵니다.sklearn.decomposition에서 PCA를 가져옵니다.파이프라인 = 파이프라인(단계=[    ('스케일러', StandardScaler()),    ('pca', PCA())])",
-    "단어와 각 단어의 해당 횟수가 포함된 사전을 설정하는 함수를 구성합니다.",
     """def create_sentence(words):    sentence = ""    missing_words = []    for word in words:        if word.endswith("."):            sentence += word        else:            sentence += word + " "    if len(missing_words) > 0:        print("다음 단어가 누락되었습니다: ")        for word in missing_words:            missing_word = input(f"{word}를 입력하세요: ")            sentence = sentence.replace(f"{word} ", f"{missing_word} ")    문장을 반환합니다.이 함수를 사용하는 방법은 다음과 같습니다:```pythonwords = ["이것", "이것", ... ]"""
 ]
 
@@ -273,7 +286,9 @@ QUERY_EXPANSION_DICT = {
     "keras": "import tensorflow.keras as keras",
     "numpy": "import numpy as np",
     "pandas": "import pandas as pd",
-    "sklearn": "import sklearn"
+    "sklearn": "import sklearn",
+    "knn": "sklearn knn knn knn Knn KNN",
+    "KNN": "sklearn knn knn knn Knn KNN"
 }
 
 def expand_query(text):
@@ -299,7 +314,7 @@ def generate_response(user_input, top_k=3, similarity_threshold=SIM_THRESHOLD):
         casual_tone: 0.5,
         drop_redundant: 0.3,
         reverse_phrase: 0.2,
-        random_cut: 0.4,
+        random_cut: 0.3,
         insert_random_prefix: 0.3,
     }
     augmented = user_input
@@ -320,10 +335,10 @@ def generate_response(user_input, top_k=3, similarity_threshold=SIM_THRESHOLD):
         ])
 
     best_response = answer_texts[best_idx]
-
+    """
     if random.random() < 0.5:
-        best_response = mix_with_similar_response(query_emb, best_response)
-
+        best_response = mix_with_similar_response(query_emb, best_idx, best_response)
+    """
     if random.random() < 0.5:
         best_response = casual_tone(best_response)
 
@@ -331,7 +346,6 @@ def generate_response(user_input, top_k=3, similarity_threshold=SIM_THRESHOLD):
         best_response = add_emoji_or_slang(best_response)
 
     return filter_response(best_response)
-
 
 @app.route('/')
 def index():
@@ -351,7 +365,7 @@ def chat_api():
             for ch in resp:
                 safe = json.dumps(ch)[1:-1]
                 yield f'data: {{"char":"{safe}"}}\n\n'
-                time.sleep(0.004096)
+                time.sleep(0.002048)
             yield 'data: {"done":true}\n\n'
         except Exception as e:
             yield f'data: {{"error":"{str(e)}"}}\n\n'

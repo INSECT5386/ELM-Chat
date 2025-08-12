@@ -1,7 +1,7 @@
 # index_maker.py
 !pip install tensorflow
 !pip install faiss-cpu
-!pip install sentencepiece
+!pip install tokenizers
 import tensorflow as tf
 from tensorflow.keras.models import load_model
 from tensorflow.keras import layers
@@ -28,19 +28,29 @@ class L2NormLayer(layers.Layer):
     def get_config(self):
         return {"axis": self.axis, "epsilon": self.epsilon, **super().get_config()}
 
-class MaskedGlobalAveragePooling1D(layers.Layer):
+class LearnableWeightedPooling(layers.Layer):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.dense = None  # 초기엔 None으로 선언해둠
+
+    def build(self, input_shape):
+        # input_shape: (batch_size, seq_len, embed_dim)
+        self.dense = layers.Dense(1, use_bias=False)
+        self.dense.build(input_shape)  # Dense 레이어 build 호출해서 가중치 생성
+        self.built = True  # build 완료 플래그 설정
+
     def call(self, inputs, mask=None):
-        if mask is None:
-            return tf.reduce_mean(inputs, axis=1)
-        mask = tf.cast(mask, inputs.dtype)
-        mask = tf.expand_dims(mask, axis=-1)
-        summed = tf.reduce_sum(inputs * mask, axis=1)
-        counts = tf.reduce_sum(mask, axis=1)
-        return summed / (counts + 1e-9)
-    def compute_mask(self, inputs, mask=None):
-        return None
+        scores = self.dense(inputs)  # (batch, seq_len, 1)
+
+        if mask is not None:
+            mask = tf.cast(mask, scores.dtype)
+            minus_inf = -1e9
+            scores = scores + (1 - mask[..., tf.newaxis]) * minus_inf
+
+        weights = tf.nn.softmax(scores, axis=1)  # (batch, seq_len, 1)
+        weighted_sum = tf.reduce_sum(inputs * weights, axis=1)  # (batch, embed_dim)
+        return weighted_sum
+
 
 # === 환경 변수 및 토큰 ===
 os.environ["HF_HOME"] = "/tmp/hf_cache"
@@ -53,15 +63,14 @@ SIM_THRESHOLD = 0.5  # 필요에 따라 조정 가능
 
 # === 모델, 토크나이저, 데이터 다운로드 및 로드 ===
 TK_MODEL_PATH = hf_hub_download(repo_id="Yuchan5386/Kode", filename="ko_bpe.json", repo_type="dataset", token=hf_token)
-MODEL_PATH = hf_hub_download(repo_id="Yuchan5386/VeELM", filename="sentence_encoder_model.keras", repo_type="model", token=hf_token)
+MODEL_PATH = hf_hub_download(repo_id="Yuchan5386/VeELM-2", filename="sentence_encoder_model.keras", repo_type="model", token=hf_token)
 JSONL_PATH = hf_hub_download(repo_id="Yuchan5386/Kode", filename="data.jsonl", repo_type="dataset", token=hf_token)
-EMBEDDINGS_PATH = hf_hub_download(repo_id="Yuchan5386/VeELM", filename="answer_embeddings_streaming.npz", repo_type="model", token=hf_token)
+EMBEDDINGS_PATH = hf_hub_download(repo_id="Yuchan5386/VeELM-2", filename="answer_embeddings_streaming.npz", repo_type="model", token=hf_token)
 
 # === SentencePiece 로드 ===
 tokenizer = Tokenizer.from_file(TK_MODEL_PATH)
 
-# === 인코더 로드 ===
-encoder = load_model(MODEL_PATH, custom_objects={"L2NormLayer": L2NormLayer, "MaskedGlobalAveragePooling1D": MaskedGlobalAveragePooling1D})
+encoder = load_model(MODEL_PATH, custom_objects={"L2NormLayer": L2NormLayer, "LearnableWeightedPooling": LearnableWeightedPooling})
 
 # === 답변 텍스트 로드 ===
 def load_answers_from_jsonl(jsonl_path):
